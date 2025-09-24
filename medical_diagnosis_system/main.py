@@ -7,7 +7,9 @@ import sqlite3
 import json
 from datetime import datetime
 import os
+import requests
 from pdf_generator import generate_medical_report_pdf
+import socket
 
 # 初始化 FastAPI 应用
 app = FastAPI(title="术前病情预测 & 中西医结合诊疗报告生成系统", version="1.0.0")
@@ -21,10 +23,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 配置 AI API
-# 支持 OpenAI 和阿里云通义千问
-DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "sk-57a7c48444c74ccc8173024d9288e625")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-openai-api-key-here")
+# 配置 AI API - 从配置文件读取
+from config import config
+DASHSCOPE_API_KEY = config.get_api_key("dashscope")
+OPENAI_API_KEY = config.get_api_key("openai")
+
+# 模型训练服务配置 - 从配置文件读取
+MODEL_TRAINING_URL = config.MODEL_TRAINING_URL
+# 备用端口配置（如果7003不可用，可以尝试其他端口）
+MODEL_TRAINING_ALTERNATIVE_PORTS = [7003, 8080, 8000, 3000, 5000]
+
+def check_port_availability(host, port, timeout=3):
+    """检查指定主机和端口是否可用"""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(timeout)
+            result = sock.connect_ex((host, port))
+            return result == 0
+    except:
+        return False
+
+def find_available_model_training_port(host="47.108.190.171", ports=None):
+    """查找可用的模型训练服务端口"""
+    if ports is None:
+        ports = MODEL_TRAINING_ALTERNATIVE_PORTS
+    
+    for port in ports:
+        if check_port_availability(host, port):
+            return f"http://{host}:{port}"
+    return None
 
 # 初始化阿里云通义千问客户端
 from openai import OpenAI
@@ -311,6 +338,76 @@ async def get_patient(patient_id: int):
             } for report in reports
         ]
     }
+
+@app.delete("/patient/{patient_id}")
+async def delete_patient(patient_id: int):
+    """删除患者记录"""
+    conn = sqlite3.connect('medical_reports.db')
+    cursor = conn.cursor()
+    
+    try:
+        # 检查患者是否存在
+        cursor.execute('SELECT name FROM patients WHERE id = ?', (patient_id,))
+        patient = cursor.fetchone()
+        
+        if not patient:
+            conn.close()
+            raise HTTPException(status_code=404, detail="患者记录未找到")
+        
+        # 删除相关报告
+        cursor.execute('DELETE FROM reports WHERE patient_id = ?', (patient_id,))
+        
+        # 删除患者记录
+        cursor.execute('DELETE FROM patients WHERE id = ?', (patient_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": f"患者 {patient[0]} 的记录已删除",
+            "deleted_id": patient_id
+        }
+        
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"删除患者记录时发生错误: {str(e)}")
+
+@app.delete("/patients/all")
+async def delete_all_patients():
+    """删除所有患者记录"""
+    conn = sqlite3.connect('medical_reports.db')
+    cursor = conn.cursor()
+    
+    try:
+        # 获取删除前的记录数
+        cursor.execute('SELECT COUNT(*) FROM patients')
+        patient_count = cursor.fetchone()[0]
+        
+        cursor.execute('SELECT COUNT(*) FROM reports')
+        report_count = cursor.fetchone()[0]
+        
+        # 删除所有报告
+        cursor.execute('DELETE FROM reports')
+        
+        # 删除所有患者
+        cursor.execute('DELETE FROM patients')
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": f"已删除所有记录：{patient_count} 个患者，{report_count} 个报告",
+            "deleted_patients": patient_count,
+            "deleted_reports": report_count
+        }
+        
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"删除所有记录时发生错误: {str(e)}")
 
 @app.post("/generate_pdf/{patient_id}")
 async def generate_pdf_report(patient_id: int):
@@ -796,6 +893,246 @@ async def list_research_models():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取模型列表时发生错误: {str(e)}")
+
+# ==================== 模型训练服务集成 API ====================
+
+class ModelTrainingRequest(BaseModel):
+    model_type: str
+    file_path: str
+    target_column: Optional[str] = None
+    time_column: Optional[str] = None
+    event_column: Optional[str] = None
+    test_size: Optional[float] = 0.2
+    max_depth: Optional[int] = 10
+    n_estimators: Optional[int] = 100
+    alpha: Optional[float] = 0.1
+    max_iter: Optional[int] = 1000
+    learning_rate: Optional[float] = 0.1
+    epochs: Optional[int] = 100
+    batch_size: Optional[int] = 32
+    input_shape: Optional[str] = "(224, 224, 3)"
+    num_classes: Optional[int] = 2
+    time_window: Optional[int] = 365
+    task_type: str
+
+@app.get("/model_training/status")
+async def check_model_training_status():
+    """检查模型训练服务状态"""
+    # 首先尝试默认端口
+    try:
+        response = requests.get(f"{MODEL_TRAINING_URL}/", timeout=5)
+        if response.status_code == 200:
+            return {
+                "success": True,
+                "status": "connected",
+                "url": MODEL_TRAINING_URL,
+                "response": response.json() if response.content else {"status": "connected"},
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            return {
+                "success": False,
+                "status": "error",
+                "url": MODEL_TRAINING_URL,
+                "error": f"服务响应异常: {response.status_code}",
+                "timestamp": datetime.now().isoformat()
+            }
+    except Exception as e:
+        # 如果默认端口失败，尝试其他端口
+        available_url = find_available_model_training_port()
+        if available_url:
+            try:
+                response = requests.get(f"{available_url}/", timeout=5)
+                if response.status_code == 200:
+                    return {
+                        "success": True,
+                        "status": "connected",
+                        "url": available_url,
+                        "response": response.json() if response.content else {"status": "connected"},
+                        "timestamp": datetime.now().isoformat()
+                    }
+            except:
+                pass
+        
+        return {
+            "success": False,
+            "status": "disconnected",
+            "url": MODEL_TRAINING_URL,
+            "error": str(e),
+            "available_ports_checked": MODEL_TRAINING_ALTERNATIVE_PORTS,
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/model_training/models")
+async def get_available_models():
+    """获取可用模型列表"""
+    try:
+        response = requests.get(f"{MODEL_TRAINING_URL}/models", timeout=10)
+        if response.status_code == 200:
+            return {
+                "success": True,
+                "models": response.json(),
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取模型列表失败: {str(e)}")
+
+@app.get("/model_training/history")
+async def get_training_history():
+    """获取训练历史"""
+    try:
+        response = requests.get(f"{MODEL_TRAINING_URL}/training/history", timeout=10)
+        if response.status_code == 200:
+            return {
+                "success": True,
+                "history": response.json(),
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取训练历史失败: {str(e)}")
+
+@app.post("/model_training/train")
+async def train_model(request: ModelTrainingRequest):
+    """训练模型"""
+    try:
+        # 准备训练数据
+        training_data = {
+            "model_type": request.model_type,
+            "file_path": request.file_path,
+            "task_type": request.task_type
+        }
+        
+        # 添加可选参数
+        if request.target_column:
+            training_data["target_column"] = request.target_column
+        if request.time_column:
+            training_data["time_column"] = request.time_column
+        if request.event_column:
+            training_data["event_column"] = request.event_column
+        if request.test_size:
+            training_data["test_size"] = request.test_size
+        if request.max_depth:
+            training_data["max_depth"] = request.max_depth
+        if request.n_estimators:
+            training_data["n_estimators"] = request.n_estimators
+        if request.alpha:
+            training_data["alpha"] = request.alpha
+        if request.max_iter:
+            training_data["max_iter"] = request.max_iter
+        if request.learning_rate:
+            training_data["learning_rate"] = request.learning_rate
+        if request.epochs:
+            training_data["epochs"] = request.epochs
+        if request.batch_size:
+            training_data["batch_size"] = request.batch_size
+        if request.input_shape:
+            training_data["input_shape"] = request.input_shape
+        if request.num_classes:
+            training_data["num_classes"] = request.num_classes
+        if request.time_window:
+            training_data["time_window"] = request.time_window
+        
+        # 根据任务类型设置超时时间
+        timeout = 300  # 默认5分钟
+        if request.task_type == "survival":
+            timeout = 600  # 10分钟
+        elif request.task_type == "deep_learning":
+            timeout = 1200  # 20分钟
+        
+        # 发送训练请求
+        response = requests.post(
+            f"{MODEL_TRAINING_URL}/train", 
+            json=training_data, 
+            timeout=timeout
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            return {
+                "success": True,
+                "result": result,
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+            
+    except requests.exceptions.Timeout:
+        raise HTTPException(status_code=408, detail="模型训练超时，请稍后重试")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"模型训练失败: {str(e)}")
+
+@app.get("/model_training/models/download")
+async def download_model():
+    """下载训练好的模型"""
+    try:
+        response = requests.get(f"{MODEL_TRAINING_URL}/models/download", timeout=30)
+        if response.status_code == 200:
+            return {
+                "success": True,
+                "model_data": response.content,
+                "content_type": response.headers.get("content-type", "application/octet-stream"),
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"下载模型失败: {str(e)}")
+
+@app.delete("/model_training/models/{model_id}")
+async def delete_model(model_id: str):
+    """删除模型"""
+    try:
+        response = requests.delete(f"{MODEL_TRAINING_URL}/models/{model_id}", timeout=30)
+        if response.status_code == 200:
+            return {
+                "success": True,
+                "message": "模型删除成功",
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除模型失败: {str(e)}")
+
+@app.post("/model_training/models/{model_id}/evaluate")
+async def evaluate_model(model_id: str):
+    """评估模型性能"""
+    try:
+        response = requests.post(f"{MODEL_TRAINING_URL}/models/{model_id}/evaluate", timeout=60)
+        if response.status_code == 200:
+            return {
+                "success": True,
+                "evaluation": response.json(),
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"模型评估失败: {str(e)}")
+
+@app.post("/model_training/predict")
+async def predict_with_model(model_id: str, data: Dict[str, Any]):
+    """使用模型进行预测"""
+    try:
+        response = requests.post(
+            f"{MODEL_TRAINING_URL}/models/{model_id}/predict", 
+            json=data, 
+            timeout=30
+        )
+        if response.status_code == 200:
+            return {
+                "success": True,
+                "prediction": response.json(),
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"模型预测失败: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
