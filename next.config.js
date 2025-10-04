@@ -16,3 +16,4 @@ const nextConfig = {
 }
 
 module.exports = nextConfig
+// Force Vercel redeploy - Sat Oct  4 23:16:38 CST 2025
