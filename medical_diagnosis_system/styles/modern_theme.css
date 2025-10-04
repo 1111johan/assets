@@ -1,0 +1,375 @@
+/* 现代化医疗系统主题样式 - 基于medical-diagnostic-system设计 */
+
+:root {
+  /* 日间主题色彩系统 */
+  --background: #fafafa;
+  --foreground: #0f0f0f;
+  --card: #ffffff;
+  --card-foreground: #0f0f0f;
+  --popover: #ffffff;
+  --popover-foreground: #0f0f0f;
+  --primary: #6366f1;
+  --primary-foreground: #fafafa;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+  --border: #e2e8f0;
+  --input: #f1f5f9;
+  --ring: #6366f1;
+  --radius: 0.5rem;
+  
+  /* 侧边栏色彩 */
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #334155;
+  --sidebar-primary: #6366f1;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #6366f1;
+  
+  /* 医疗专用色彩 */
+  --medical-success: #10b981;
+  --medical-warning: #f59e0b;
+  --medical-error: #ef4444;
+  --medical-info: #3b82f6;
+  --medical-surface: #f8fafc;
+  --medical-surface-variant: #f1f5f9;
+  --medical-gradient-start: #6366f1;
+  --medical-gradient-end: #8b5cf6;
+}
+
+/* 深色主题 */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #1a1a1a;
+  --card-foreground: #fafafa;
+  --popover: #1a1a1a;
+  --popover-foreground: #fafafa;
+  --primary: #818cf8;
+  --primary-foreground: #0a0a0a;
+  --secondary: #262626;
+  --secondary-foreground: #fafafa;
+  --muted: #262626;
+  --muted-foreground: #a1a1aa;
+  --accent: #262626;
+  --accent-foreground: #fafafa;
+  --destructive: #f87171;
+  --destructive-foreground: #0a0a0a;
+  --border: #262626;
+  --input: #262626;
+  --ring: #818cf8;
+  
+  --sidebar: #111111;
+  --sidebar-foreground: #e4e4e7;
+  --sidebar-primary: #818cf8;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #262626;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #262626;
+  --sidebar-ring: #818cf8;
+  
+  --medical-success: #34d399;
+  --medical-warning: #fbbf24;
+  --medical-error: #f87171;
+  --medical-info: #60a5fa;
+  --medical-surface: #1a1a1a;
+  --medical-surface-variant: #262626;
+  --medical-gradient-start: #818cf8;
+  --medical-gradient-end: #a78bfa;
+}
+
+/* 基础样式重置 */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+}
+
+/* 现代化卡片样式 */
+.modern-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease-in-out;
+}
+
+.modern-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* 医疗专用卡片 */
+.medical-card {
+  background: var(--medical-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.medical-card:hover {
+  background: var(--medical-surface-variant);
+  transform: translateY(-1px);
+}
+
+/* 按钮样式 */
+.modern-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.modern-button-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 0.5rem 1rem;
+}
+
+.modern-button-primary:hover {
+  background: var(--primary);
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.modern-button-secondary {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+}
+
+.modern-button-secondary:hover {
+  background: var(--accent);
+}
+
+/* 输入框样式 */
+.modern-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--input);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.modern-input:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* 状态指示器 */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-success {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--medical-success);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--medical-warning);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.status-error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--medical-error);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-info {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--medical-info);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* 渐变文字 */
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary), var(--medical-gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 动画效果 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s ease-out;
+}
+
+/* 侧边栏样式 */
+.sidebar {
+  background: var(--sidebar);
+  border-right: 1px solid var(--sidebar-border);
+  min-height: 100vh;
+  width: 16rem;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+}
+
+.sidebar-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.sidebar-nav {
+  padding: 1rem;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  margin-bottom: 0.25rem;
+  border-radius: var(--radius);
+  color: var(--sidebar-foreground);
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.sidebar-item:hover {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+
+.sidebar-item.active {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--sidebar-primary);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+/* 主内容区域 */
+.main-content {
+  margin-left: 16rem;
+  min-height: 100vh;
+  background: var(--background);
+}
+
+.main-header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 2rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .main-content {
+    margin-left: 0;
+  }
+}
+
+/* 表格样式 */
+.modern-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.modern-table th {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.modern-table td {
+  padding: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.modern-table tr:hover {
+  background: var(--muted);
+}
+
+/* 加载动画 */
+.loading-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  border-top-color: var(--primary);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

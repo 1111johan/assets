@@ -1,0 +1,12 @@
+# OpenAI API 配置
+OPENAI_API_KEY=your_openai_api_key_here
+
+# 数据库配置
+DATABASE_URL=sqlite:///medical_reports.db
+
+# 服务器配置
+HOST=0.0.0.0
+PORT=8000
+
+# 前端配置
+STREAMLIT_PORT=8501
