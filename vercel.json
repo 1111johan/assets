@@ -24,5 +24,7 @@
     "api/**/*.py": {
       "maxDuration": 30
     }
-  }
+  },
+  "installCommand": "npm install",
+  "buildCommand": "npm run build"
 }
